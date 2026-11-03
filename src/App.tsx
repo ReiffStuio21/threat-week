@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { AnimatePresence, motion, useInView } from "motion/react"
 import { useRef } from "react"
 import {
@@ -14,31 +14,36 @@ import { MagicCard } from "@/components/magicui/magic-card"
 import { ShineBorder } from "@/components/magicui/shine-border"
 import { BlurFade } from "@/components/magicui/blur-fade"
 import { Globe } from "@/components/magicui/globe"
-import { SAMPLES, scoreOf, type Scenario } from "@/data"
+import { AREAS, DAYS, byId, loadRun, queueFor, saveRun, type Answer, type Run } from "@/engine"
+import { SituationView } from "@/components/SituationView"
+import { DecisionPanel } from "@/components/DecisionPanel"
+import { ClockIn } from "@/pages/ClockIn"
+import { Play as PlayPage } from "@/pages/Play"
+import { Report as ReportPage } from "@/pages/Report"
 import { cn } from "@/lib/utils"
 import type { COBEOptions } from "cobe"
 
 /* ───────────────────────── NAV ───────────────────────── */
-function Nav() {
+function Nav({ onStart, onHome, landing }: { onStart: () => void; onHome: () => void; landing: boolean }) {
   return (
     <header className="fixed inset-x-0 top-0 z-50 pt-[env(safe-area-inset-top)]">
       <div className="mx-auto mt-3 flex max-w-6xl items-center justify-between gap-4 rounded-2xl px-4 py-2.5 glass mx-[max(12px,env(safe-area-inset-left))] md:mx-auto">
-        <a href="#top" className="flex items-center gap-3">
+        <a href="#top" onClick={(e) => { e.preventDefault(); onHome() }} className="flex items-center gap-3">
           <img src="/logo.png" alt="Launching IT Solutions" className="size-9 object-contain" />
           <div className="leading-tight">
             <div className="font-mono text-[10px] tracking-[0.2em] text-mute uppercase">Launching IT Solutions</div>
             <div className="font-display text-[17px] font-semibold">Threat Week</div>
           </div>
         </a>
-        <nav className="hidden items-center gap-7 text-sm text-mute md:flex">
+        <nav className={cn("hidden items-center gap-7 text-sm text-mute", landing && "md:flex")}>
           <a className="transition hover:text-ink" href="#vectors">Threat vectors</a>
           <a className="transition hover:text-ink" href="#live">Live situation</a>
           <a className="transition hover:text-ink" href="#map">Threat picture</a>
           <a className="transition hover:text-ink" href="#report">Report card</a>
         </nav>
-        <a href="#live" className="rounded-xl bg-white/[0.06] px-4 py-2 text-sm font-medium ring-1 ring-white/10 transition hover:bg-white/[0.1]">
-          Start shift
-        </a>
+        {landing ? (
+          <button onClick={onStart} className="rounded-xl bg-white/[0.06] px-4 py-2 text-sm font-medium ring-1 ring-white/10 transition hover:bg-white/[0.1]">Start shift</button>
+        ) : <span />}
       </div>
     </header>
   )
@@ -97,7 +102,7 @@ function ThreatFeed() {
   )
 }
 
-function Hero() {
+function Hero({ onStart }: { onStart: () => void }) {
   return (
     <section id="top" className="grain relative isolate flex min-h-[100svh] items-center overflow-hidden pt-28 pb-16">
       <div className="absolute inset-0 -z-20 bg-cover bg-center" style={{ backgroundImage: `url(${HERO.poster})` }}>
@@ -130,7 +135,7 @@ function Hero() {
           </BlurFade>
           <BlurFade delay={0.6}>
             <div className="mt-9 flex flex-wrap items-center gap-4">
-              <ShimmerButton background="linear-gradient(135deg,#0891b2,#0b5f78)" shimmerColor="#a5f3fc" borderRadius="14px" className="px-6 py-3.5 text-[15px] font-semibold">
+              <ShimmerButton onClick={onStart} background="linear-gradient(135deg,#0891b2,#0b5f78)" shimmerColor="#a5f3fc" borderRadius="14px" className="px-6 py-3.5 text-[15px] font-semibold">
                 <span className="flex items-center gap-2">Start your shift <ArrowRight className="size-4" /></span>
               </ShimmerButton>
               <a href="#live" className="group flex items-center gap-2.5 rounded-[14px] px-5 py-3.5 text-[15px] text-ink ring-1 ring-white/15 transition hover:bg-white/[0.05]">
@@ -242,232 +247,39 @@ function Vectors() {
 }
 
 /* ───────────────────────── LIVE SITUATION ───────────────────────── */
-function Device({ s }: { s: Scenario }) {
-  const [tip, setTip] = useState(false)
-  const v = s.view
-  if (v.type === "email") {
-    const [a, b] = v.body.split("{link}")
-    return (
-      <div className="p-6">
-        <div className="font-display text-xl font-semibold">{v.subject}</div>
-        <div className="mt-4 flex items-center gap-3 border-b border-white/[0.07] pb-4">
-          <div className="grid size-10 place-items-center rounded-full bg-defense/15 font-semibold text-defense-hi">IT</div>
-          <div className="min-w-0">
-            <div className="font-medium">{v.fromName}</div>
-            <div className="truncate font-mono text-[12px] text-mute">&lt;{v.fromAddr}&gt;</div>
-          </div>
-        </div>
-        <div className="mt-4 text-[15px] leading-relaxed whitespace-pre-line text-ink/90">
-          {a}
-          {v.link && (
-            <span>
-              <button onClick={() => setTip((t) => !t)} className="break-all text-defense-hi underline decoration-defense/50 underline-offset-4">{v.link.text}</button>
-              <AnimatePresence>
-                {tip && (
-                  <motion.span initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                    className="mt-2 block rounded-lg border border-threat/30 bg-threat/10 px-3 py-2 font-mono text-[12px] break-all text-threat-hi">
-                    Real destination → {v.link.href}
-                  </motion.span>
-                )}
-              </AnimatePresence>
-            </span>
-          )}
-          {b}
-        </div>
-        <div className="mt-5 font-mono text-[11px] text-faint">Tap the link to inspect where it really goes.</div>
-      </div>
-    )
-  }
-  if (v.type === "voicemail") {
-    return (
-      <div className="p-6">
-        <div className="flex flex-col items-center gap-2 border-b border-white/[0.07] pb-6 text-center">
-          <div className="relative grid size-16 place-items-center rounded-full bg-defense/10 ring-1 ring-defense/30">
-            <span className="absolute inset-0 animate-ping-slow rounded-full ring-1 ring-defense/40" />
-            <Phone className="size-6 text-defense-hi" />
-          </div>
-          <div className="font-display text-xl font-semibold">{v.callerName}</div>
-          <div className="font-mono text-[12px] text-mute">{v.callerNum} · voicemail 0:38</div>
-          <div className="mt-2 flex h-8 items-end gap-[3px]">
-            {Array.from({ length: 42 }).map((_, i) => (
-              <motion.span key={i} className="w-[3px] rounded-full bg-defense/70"
-                animate={{ height: [6, 8 + ((i * 37) % 22), 6] }} transition={{ duration: 1.1 + (i % 5) * 0.12, repeat: Infinity, ease: "easeInOut" }} />
-            ))}
-          </div>
-        </div>
-        <p className="mt-5 border-l-2 border-white/10 pl-4 text-[15px] leading-relaxed text-ink/90">{v.transcript}</p>
-        <p className="mt-4 text-[14px] text-mute italic">{v.note}</p>
-      </div>
-    )
-  }
-  return (
-    <div className="p-6">
-      <div className="font-mono text-[12px] tracking-wider text-mute uppercase">{v.place}</div>
-      <div className="mt-4 overflow-hidden rounded-xl border border-white/[0.08]">
-        {v.networks.map((n) => (
-          <div key={n.name} className="flex items-center gap-3 border-b border-white/[0.06] px-4 py-3 last:border-0">
-            <Wifi className="size-4 text-mute" />
-            <span className="flex-1 font-medium">{n.name}</span>
-            <span className="font-mono text-[11px] text-mute">{n.lock ? <span className="flex items-center gap-1"><Lock className="size-3" /> Secured</span> : "Open"}</span>
-            <span className="flex h-3.5 items-end gap-[2px]">{[1, 2, 3, 4].map((b) => <i key={b} className={cn("w-[3px] rounded-sm", b <= n.bars ? "bg-ink" : "bg-white/15")} style={{ height: b * 3 + 2 }} />)}</span>
-          </div>
-        ))}
-      </div>
-      <div className="mt-4 rounded-xl bg-threat/10 px-4 py-3 text-[14px] text-threat-hi ring-1 ring-threat/20">{v.note}</div>
-    </div>
-  )
-}
-
-function Bar({ label, value, max }: { label: string; value: number; max: number }) {
-  const pct = Math.round((value / max) * 100)
-  return (
-    <div>
-      <div className="mb-1.5 flex justify-between font-mono text-[11px] tracking-wider text-mute uppercase"><span>{label}</span><span className="text-ink">{value}/{max}</span></div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.07]">
-        <motion.div className={cn("h-full rounded-full", pct >= 80 ? "bg-safe" : pct >= 50 ? "bg-threat" : "bg-danger")}
-          initial={{ width: 0 }} animate={{ width: pct + "%" }} transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }} />
-      </div>
-    </div>
-  )
-}
-
-function Decision({ s }: { s: Scenario }) {
-  const [step, setStep] = useState(0)
-  const [verdict, setVerdict] = useState<boolean | null>(null)
-  const [ev, setEv] = useState<number[]>([])
-  const [resp, setResp] = useState<number | null>(null)
-  const score = useMemo(() => (step === 3 && verdict !== null && resp !== null ? scoreOf(s, verdict, ev, resp) : null), [step, verdict, ev, resp, s])
-  const best = s.responses.reduce((m, r) => (r.p > m.p ? r : m), s.responses[0])
-  const steps = ["Spot", "Analyze", "Respond"]
-  const slide = { initial: { opacity: 0, x: 24, filter: "blur(4px)" }, animate: { opacity: 1, x: 0, filter: "blur(0px)" }, exit: { opacity: 0, x: -24, filter: "blur(4px)" }, transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] as const } }
-
-  return (
-    <div className="flex h-full flex-col p-6">
-      <div className="mb-6 grid grid-cols-3 gap-2">
-        {steps.map((t, i) => (
-          <div key={t}>
-            <div className="h-[3px] overflow-hidden rounded-full bg-white/[0.08]">
-              <motion.div className="h-full bg-defense" animate={{ width: step > i ? "100%" : step === i ? "45%" : "0%" }} transition={{ duration: 0.5 }} />
-            </div>
-            <div className={cn("mt-2 font-mono text-[11px] tracking-wider uppercase", step >= i ? "text-ink" : "text-faint")}>{i + 1} {t}</div>
-          </div>
-        ))}
-      </div>
-      <AnimatePresence mode="wait">
-        {step === 0 && (
-          <motion.div key="v" {...slide}>
-            <h3 className="text-2xl font-semibold">What’s your read?</h3>
-            <p className="mt-1 text-sm text-mute">Look closely before you decide.</p>
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              {[[false, "Legitimate", "Normal, safe activity", "hover:border-safe/60"], [true, "Attack", "Something is wrong", "hover:border-threat/70"]].map(([val, t, d, h]) => (
-                <motion.button key={t as string} whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}
-                  onClick={() => { setVerdict(val as boolean); setStep(1) }}
-                  className={cn("rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-left transition", h as string)}>
-                  <div className="font-display text-xl font-semibold">{t as string}</div>
-                  <div className="mt-1 text-[13px] text-mute">{d as string}</div>
-                </motion.button>
-              ))}
-            </div>
-          </motion.div>
-        )}
-        {step === 1 && (
-          <motion.div key="e" {...slide}>
-            <h3 className="text-2xl font-semibold">Which details are real evidence?</h3>
-            <p className="mt-1 text-sm text-mute">Select every detail that matters. Some only look important.</p>
-            <div className="mt-5 grid gap-2">
-              {s.evidence.map((e, i) => {
-                const on = ev.includes(i)
-                return (
-                  <motion.button key={i} layout whileTap={{ scale: 0.99 }} onClick={() => setEv((x) => (on ? x.filter((y) => y !== i) : [...x, i]))}
-                    className={cn("flex items-start gap-3 rounded-xl border px-4 py-3 text-left text-[14px] transition",
-                      on ? "border-defense/60 bg-defense/[0.09]" : "border-white/[0.08] bg-white/[0.02] hover:border-white/20")}>
-                    <span className={cn("mt-0.5 grid size-4 shrink-0 place-items-center rounded-[5px] border", on ? "border-defense bg-defense text-void" : "border-white/25")}>{on && <Check className="size-3" strokeWidth={3} />}</span>
-                    {e.t}
-                  </motion.button>
-                )
-              })}
-            </div>
-            <button onClick={() => setStep(2)} className="mt-5 rounded-xl bg-defense px-5 py-2.5 text-sm font-semibold text-void transition hover:bg-defense-hi">Lock in evidence</button>
-          </motion.div>
-        )}
-        {step === 2 && (
-          <motion.div key="r" {...slide}>
-            <h3 className="text-2xl font-semibold">What do you do?</h3>
-            <p className="mt-1 text-sm text-mute">Pick the action you’d actually take.</p>
-            <div className="mt-5 grid gap-2">
-              {s.responses.map((r, i) => (
-                <motion.button key={i} whileTap={{ scale: 0.99 }} onClick={() => { setResp(i); setStep(3) }}
-                  className="rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-left text-[14px] transition hover:border-defense/50 hover:bg-defense/[0.06]">
-                  {r.t}
-                </motion.button>
-              ))}
-            </div>
-          </motion.div>
-        )}
-        {step === 3 && score && resp !== null && (
-          <motion.div key="d" {...slide}>
-            <div className="flex items-end gap-4">
-              <div className={cn("font-display text-6xl font-semibold tabular-nums", score.total >= 80 ? "text-safe" : score.total >= 50 ? "text-threat-hi" : "text-danger")}>
-                <NumberTicker value={score.total} className="text-inherit" />
-              </div>
-              <div className="pb-2">
-                <div className="font-mono text-[11px] text-faint">/ 100</div>
-                <div className="font-display text-lg font-semibold">{s.debrief.name}</div>
-              </div>
-            </div>
-            <div className="mt-5 grid gap-3">
-              <Bar label="Spot" value={score.spot} max={30} />
-              <Bar label="Analyze" value={score.analyze} max={30} />
-              <Bar label="Respond" value={score.respond} max={40} />
-            </div>
-            <div className={cn("mt-5 rounded-xl px-4 py-3 text-[14px] ring-1",
-              s.responses[resp].p >= 40 ? "bg-safe/10 ring-safe/25" : s.responses[resp].p >= 15 ? "bg-threat/10 ring-threat/25" : "bg-danger/10 ring-danger/25")}>
-              <div className="font-medium">{s.responses[resp].t}</div>
-              <div className="mt-1 text-mute">{s.responses[resp].out}</div>
-            </div>
-            {s.responses[resp].p < best.p && <p className="mt-3 text-[13px] text-mute">Best response: <span className="text-ink">{best.t}</span></p>}
-            <p className="mt-4 text-[15px] text-ink/90">{s.debrief.lesson}</p>
-            <button onClick={() => { setStep(0); setVerdict(null); setEv([]); setResp(null) }} className="mt-5 text-sm text-defense-hi hover:underline">Replay this situation</button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  )
-}
+const DEMO = ["m3", "t5", "t1"]
 
 function LiveSituation() {
   const [idx, setIdx] = useState(0)
-  const s = SAMPLES[idx]
+  const s = byId[DEMO[idx]]
   return (
     <section id="live" className="relative py-28">
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(60%_50%_at_50%_0%,rgba(34,181,214,0.10),transparent_70%)]" />
       <div className="mx-auto max-w-6xl px-[max(20px,env(safe-area-inset-left))]">
-        <SectionHead eyebrow="Try it now" title="Every situation is a decision under pressure." sub="Pick a situation below and work it the way students do: spot, analyze, respond, then see the consequence." />
+        <SectionHead eyebrow="Try it now" title="Every situation is a decision under pressure." sub="Pick a situation and work it the way students do: spot, analyze, respond, then see the consequence." />
         <div className="mb-6 flex flex-wrap gap-2">
-          {SAMPLES.map((x, i) => (
-            <button key={x.id} onClick={() => setIdx(i)}
-              className={cn("relative rounded-full px-4 py-2 text-sm transition", i === idx ? "text-void" : "text-mute ring-1 ring-white/10 hover:text-ink")}>
-              {i === idx && <motion.span layoutId="pill" className="absolute inset-0 rounded-full bg-defense" transition={{ type: "spring", stiffness: 400, damping: 34 }} />}
-              <span className="relative">{x.day} · {x.time} · {x.area}</span>
-            </button>
-          ))}
+          {DEMO.map((id, i) => {
+            const x = byId[id]
+            return (
+              <button key={id} onClick={() => setIdx(i)}
+                className={cn("relative rounded-full px-4 py-2 text-sm transition", i === idx ? "text-void" : "text-mute ring-1 ring-white/10 hover:text-ink")}>
+                {i === idx && <motion.span layoutId="pill" className="absolute inset-0 rounded-full bg-defense" transition={{ type: "spring", stiffness: 400, damping: 34 }} />}
+                <span className="relative">{DAYS[x.day]} · {x.time} · {AREAS[x.area].label}</span>
+              </button>
+            )
+          })}
         </div>
-        <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="grid items-start gap-5 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="relative overflow-hidden rounded-3xl glass">
             <BorderBeam size={160} duration={10} colorFrom="#22b5d6" colorTo="#0891b2" />
-            <div className="flex items-center gap-2 border-b border-white/[0.07] px-5 py-3">
-              <span className="flex gap-1.5"><i className="size-2.5 rounded-full bg-white/15" /><i className="size-2.5 rounded-full bg-white/15" /><i className="size-2.5 rounded-full bg-white/15" /></span>
-              <span className="ml-2 font-mono text-[11px] tracking-wider text-mute uppercase">{s.view.type === "email" ? "Halcyon Mail · Inbox" : s.view.type === "voicemail" ? "Phone · Voicemail" : "Wi-Fi · Choose a network"}</span>
-              <span className="ml-auto rounded-md bg-white/[0.06] px-2 py-0.5 font-mono text-[10px] text-mute">LEVEL {s.level}</span>
-            </div>
             <AnimatePresence mode="wait">
               <motion.div key={s.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }}>
-                <Device s={s} />
+                <SituationView s={s} levelTag={<span className="rounded-md bg-white/[0.06] px-2 py-0.5 font-mono text-[10px] text-mute">LEVEL {s.level}</span>} />
               </motion.div>
             </AnimatePresence>
           </div>
           <div className="relative min-h-[460px] overflow-hidden rounded-3xl glass">
-            <Decision key={s.id} s={s} />
+            <DecisionPanel key={s.id} s={s} />
           </div>
         </div>
       </div>
@@ -537,7 +349,7 @@ function Ring({ value }: { value: number }) {
   )
 }
 
-function Report() {
+function ReportShowcase() {
   const areas = [["Email", 92], ["Phone & Text", 84], ["AI & Deepfakes", 61], ["Network", 88], ["Physical", 95], ["Devices", 79]] as const
   return (
     <section id="report" className="mx-auto max-w-6xl px-[max(20px,env(safe-area-inset-left))] py-28">
@@ -574,7 +386,7 @@ function Report() {
 }
 
 /* ───────────────────────── CTA ───────────────────────── */
-function Closing() {
+function Closing({ onStart }: { onStart: () => void }) {
   return (
     <section className="mx-auto max-w-6xl px-[max(20px,env(safe-area-inset-left))] pb-24">
       <div className="relative overflow-hidden rounded-[28px] px-8 py-16 text-center glass">
@@ -584,7 +396,7 @@ function Closing() {
         <h2 className="mx-auto mt-5 max-w-2xl text-[clamp(30px,4.5vw,50px)] leading-[1.05] font-semibold">Score 85% or higher. Earn your certificate.</h2>
         <p className="mx-auto mt-4 max-w-xl text-mute">Signed by Launching IT Solutions, earned on the full week, challenge week or post-test.</p>
         <div className="mt-8 flex justify-center">
-          <ShimmerButton background="linear-gradient(135deg,#0891b2,#0b5f78)" shimmerColor="#a5f3fc" borderRadius="14px" className="px-7 py-3.5 text-[15px] font-semibold">
+          <ShimmerButton onClick={onStart} background="linear-gradient(135deg,#0891b2,#0b5f78)" shimmerColor="#a5f3fc" borderRadius="14px" className="px-7 py-3.5 text-[15px] font-semibold">
             <span className="flex items-center gap-2">Clock in <ArrowRight className="size-4" /></span>
           </ShimmerButton>
         </div>
@@ -597,17 +409,80 @@ function Closing() {
   )
 }
 
+type View = "landing" | "clockin" | "play" | "report"
+const VIEWS: View[] = ["landing", "clockin", "play", "report"]
+const viewFromHash = (): View => {
+  const h = window.location.hash.replace("#", "")
+  return (VIEWS as string[]).includes(h) && h !== "landing" ? (h as View) : "landing"
+}
+
 export default function App() {
+  const [run, setRun] = useState<Run | null>(() => loadRun())
+  const [view, setViewState] = useState<View>(() => {
+    const v = viewFromHash()
+    const r = loadRun()
+    if ((v === "play" && !(r && r.idx < r.queue.length)) || (v === "report" && !(r && r.idx >= r.queue.length))) return "landing"
+    return v
+  })
+
+  const setView = useCallback((v: View) => {
+    setViewState(v)
+    const url = v === "landing" ? window.location.pathname : "#" + v
+    if (window.location.hash.replace("#", "") !== (v === "landing" ? "" : v)) window.history.pushState(null, "", url)
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior })
+  }, [])
+
+  useEffect(() => {
+    const onPop = () => setViewState(viewFromHash())
+    window.addEventListener("popstate", onPop)
+    return () => window.removeEventListener("popstate", onPop)
+  }, [])
+
+  useEffect(() => { saveRun(run) }, [run])
+
+  const start = (name: string, mode: string) => {
+    setRun({ name, mode, queue: queueFor(mode), idx: 0, answers: {} })
+    setView("play")
+  }
+  const answer = (id: string, a: Answer) => setRun((r) => (r ? { ...r, answers: { ...r.answers, [id]: a } } : r))
+  const next = () => {
+    setRun((r) => {
+      if (!r) return r
+      const idx = r.idx + 1
+      return idx >= r.queue.length ? { ...r, idx, finishedAt: r.finishedAt || new Date().toISOString() } : { ...r, idx }
+    })
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+  // Keep the view consistent with the saved run (e.g. a bookmarked #play link with no shift in progress).
+  useEffect(() => {
+    const active = !!run && run.idx < run.queue.length
+    const finished = !!run && run.idx >= run.queue.length
+    if (view === "play" && !active) setView(finished ? "report" : "clockin")
+    if (view === "report" && !finished) setView(active ? "play" : "clockin")
+  }, [run, view, setView])
+
+  const goStart = () => setView("clockin")
+  const resume = () => { if (run) setView(run.idx >= run.queue.length ? "report" : "play") }
+
   return (
     <main>
-      <Nav />
-      <Hero />
-      <Ticker />
-      <Vectors />
-      <LiveSituation />
-      <ThreatMap />
-      <Report />
-      <Closing />
+      <Nav onStart={goStart} onHome={() => setView("landing")} landing={view === "landing"} />
+      {view === "landing" && (
+        <>
+          <Hero onStart={goStart} />
+          <Ticker />
+          <Vectors />
+          <LiveSituation />
+          <ThreatMap />
+          <ReportShowcase />
+          <Closing onStart={goStart} />
+        </>
+      )}
+      {view === "clockin" && <ClockIn saved={run} onStart={start} onResume={resume} onBack={() => setView("landing")} />}
+      {view === "play" && run && run.idx < run.queue.length && <PlayPage run={run} onAnswer={answer} onNext={next} onExit={() => setView("landing")} />}
+      {view === "report" && run && (
+        <ReportPage run={run} onPractice={(area) => start(run.name, "area:" + area)} onNewRun={() => { setRun(null); setView("clockin") }} onHome={() => setView("landing")} />
+      )}
     </main>
   )
 }

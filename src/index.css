@@ -56,6 +56,26 @@
 }
 
 @layer components {
+  /* Situation content written as HTML in the scenario bank */
+  .mail-body { display: grid; gap: 12px; font-size: 15px; line-height: 1.65; color: rgb(232 236 246 / 0.9); }
+  .mail-body .cal { font-family: var(--font-mono); font-size: 13px; background: rgb(255 255 255 / 0.04); border: 1px solid rgb(255 255 255 / 0.07); padding: 9px 12px; border-radius: 10px; }
+  .mail-body .fine { font-size: 13.5px; color: var(--color-mute); font-style: italic; }
+  .lnk { color: var(--color-defense-hi); text-decoration: underline; text-decoration-color: rgb(34 181 214 / 0.5); text-underline-offset: 4px; cursor: pointer; word-break: break-all; }
+  .lnk-tip { display: block; margin-top: 8px; font-family: var(--font-mono); font-size: 12px; word-break: break-all; color: var(--color-threat-hi); background: rgb(245 158 11 / 0.1); border: 1px solid rgb(245 158 11 / 0.3); border-radius: 10px; padding: 8px 12px; }
+  .browser-page p + p { margin-top: 10px; }
+  .browser-page { font-size: 15px; line-height: 1.6; }
+  .bw-alert { background: linear-gradient(180deg, #1d3fa3, #122a72); color: #fff; border-radius: 14px; padding: 22px; text-align: center; box-shadow: 0 0 0 1px rgb(255 255 255 / 0.1), 0 20px 60px -20px rgb(29 63 163 / 0.7); }
+  .bw-alert .bw-big { font-family: var(--font-display); font-size: 26px; font-weight: 700; letter-spacing: 0.02em; }
+  .bw-alert .bw-phone { font-family: var(--font-mono); font-size: 24px; font-weight: 600; }
+  .bw-alert .bw-fine { font-size: 13px; opacity: 0.8; font-style: italic; }
+  .bw-big2 { font-family: var(--font-display); font-size: 23px; font-weight: 600; }
+  .bw-mono { font-family: var(--font-mono); font-size: 12.5px; color: var(--color-mute); }
+  .bw-fine { font-size: 13.5px; color: var(--color-mute); font-style: italic; }
+  .bw-cert .bw-big2 { color: #fb7185; }
+  .bw-btns { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-top: 16px; }
+  .bw-btn { background: var(--color-brand); color: #fff; border-radius: 10px; padding: 9px 16px; font-weight: 600; font-size: 14px; }
+  .bw-link { font-size: 13.5px; color: var(--color-mute); text-decoration: underline; }
+
   .glass {
     background: linear-gradient(180deg, rgb(255 255 255 / 0.045), rgb(255 255 255 / 0.015));
     border: 1px solid rgb(148 163 200 / 0.14);
