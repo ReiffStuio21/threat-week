@@ -4,7 +4,8 @@ import { useRef } from "react"
 import {
   ArrowRight, Award, Bot, Check, DoorOpen, Laptop, Lock, Mail, Phone, Play, ShieldCheck, Smartphone, Wifi,
 } from "lucide-react"
-import Radar from "@/components/rb/Radar"
+import { LazyVideo } from "@/components/LazyVideo"
+import { HERO, CLIPS } from "@/media"
 import DecryptedText from "@/components/rb/DecryptedText"
 import { BorderBeam } from "@/components/magicui/border-beam"
 import { NumberTicker } from "@/components/magicui/number-ticker"
@@ -99,12 +100,11 @@ function ThreatFeed() {
 function Hero() {
   return (
     <section id="top" className="grain relative isolate flex min-h-[100svh] items-center overflow-hidden pt-28 pb-16">
-      <div className="absolute inset-0 -z-20">
-        <Radar color="#22b5d6" centerX={0.7} centerY={0.52} scale={1.08} tilt={0.5} targets={7} clutter={0.22}
-          glow={1.3} brightness={1.15} gridOpacity={0.75} speed={0.7} trail={0.45} ringCount={7} spokeCount={12} />
+      <div className="absolute inset-0 -z-20 bg-cover bg-center" style={{ backgroundImage: `url(${HERO.poster})` }}>
+        <LazyVideo eager src={HERO.video} poster={HERO.poster} className="size-full object-cover" />
       </div>
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_70%_50%,transparent_0%,rgba(4,6,13,0.35)_45%,rgba(4,6,13,0.92)_80%)]" />
-      <div className="absolute inset-0 -z-10 bg-gradient-to-r from-void via-void/80 to-transparent md:via-void/55" />
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_68%_45%,transparent_0%,rgba(4,6,13,0.15)_40%,rgba(4,6,13,0.85)_85%)]" />
+      <div className="absolute inset-0 -z-10 bg-gradient-to-r from-void via-void/75 to-transparent md:via-void/40" />
       <div className="absolute inset-x-0 bottom-0 -z-10 h-40 bg-gradient-to-t from-void to-transparent" />
 
       <div className="mx-auto grid w-full max-w-6xl items-end gap-12 px-[max(20px,env(safe-area-inset-left))] md:grid-cols-[1.25fr_0.75fr]">
@@ -179,12 +179,18 @@ function Ticker() {
 
 /* ───────────────────────── VECTORS ───────────────────────── */
 const VECTORS = [
-  { icon: Mail, name: "Email", n: 7, ex: "Phishing, CEO wire fraud, poisoned attachments" },
-  { icon: Smartphone, name: "Phone, text & social", n: 8, ex: "Smishing, vishing, QR codes, SIM swaps, romance scams" },
-  { icon: Bot, name: "AI & deepfakes", n: 6, ex: "Cloned voices, deepfake calls, fake chatbots, prompt injection", featured: true },
-  { icon: Wifi, name: "Network & Wi-Fi", n: 5, ex: "Evil twins, man-in-the-middle, rogue certificates" },
-  { icon: DoorOpen, name: "Physical", n: 5, ex: "Tailgating, fake contractors, USB drops, shoulder surfing" },
-  { icon: Laptop, name: "Devices & accounts", n: 6, ex: "Fake updates, scareware, MFA fatigue, ransomware" },
+  { icon: Mail, name: "Email", n: 7, ex: "Phishing, CEO wire fraud, poisoned attachments", clip: 0,
+    attack: "A message baits you into handing over your password.", defense: "Inspect the real sender and link, then report it." },
+  { icon: Smartphone, name: "Phone, text & social", n: 8, ex: "Smishing, vishing, QR codes, SIM swaps, romance scams", clip: 1,
+    attack: "A text link reaches for your card or login.", defense: "Never pay or sign in from a texted link." },
+  { icon: Bot, name: "AI & deepfakes", n: 6, ex: "Cloned voices, deepfake calls, fake chatbots, prompt injection", featured: true, clip: 2,
+    attack: "A perfect face or voice asks for money or access.", defense: "Verify on a channel you already trust." },
+  { icon: Wifi, name: "Network & Wi-Fi", n: 5, ex: "Evil twins, man-in-the-middle, rogue certificates", clip: 3,
+    attack: "A rogue hotspot sits between you and the internet.", defense: "Use the real network plus a VPN." },
+  { icon: DoorOpen, name: "Physical", n: 5, ex: "Tailgating, fake contractors, USB drops, shoulder surfing", clip: 4,
+    attack: "Someone follows you through a secure door.", defense: "Let the door close. Send them to reception." },
+  { icon: Laptop, name: "Devices & accounts", n: 6, ex: "Fake updates, scareware, MFA fatigue, ransomware", clip: 5,
+    attack: "Ransomware locks files and spreads across the network.", defense: "Disconnect fast, keep it on, call IT." },
 ]
 
 function SectionHead({ eyebrow, title, sub }: { eyebrow: string; title: string; sub?: string }) {
@@ -200,13 +206,17 @@ function SectionHead({ eyebrow, title, sub }: { eyebrow: string; title: string; 
 function Vectors() {
   return (
     <section id="vectors" className="mx-auto max-w-6xl px-[max(20px,env(safe-area-inset-left))] py-28">
-      <SectionHead eyebrow="Six threat vectors" title="Attacks don’t come from one direction." sub="Every situation is scored by vector, so each student sees exactly where they’re exposed." />
+      <SectionHead eyebrow="Six threat vectors" title="See the attack. Then see the defense." sub="Six ways attackers get in, and the move that stops each one. Every situation is scored by vector, so students see exactly where they’re exposed." />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {VECTORS.map((v, i) => (
           <BlurFade key={v.name} inView delay={0.06 * i}>
             <MagicCard className="h-full rounded-2xl" gradientFrom="#22b5d6" gradientTo="#0891b2" gradientColor="#0f1a33" gradientOpacity={0.9}>
-              <div className="relative flex h-full flex-col gap-5 p-6">
-                {v.featured && <BorderBeam size={90} duration={7} colorFrom="#f59e0b" colorTo="#22b5d6" />}
+              {v.featured && <BorderBeam size={90} duration={7} colorFrom="#f59e0b" colorTo="#22b5d6" />}
+              <div className="relative aspect-video overflow-hidden rounded-t-2xl bg-deep">
+                <LazyVideo src={CLIPS[v.clip]} className="absolute inset-0 size-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/10 to-transparent" />
+              </div>
+              <div className="relative flex flex-col gap-5 p-6 pt-4">
                 <div className="flex items-center justify-between">
                   <div className={cn("grid size-11 place-items-center rounded-xl ring-1",
                     v.featured ? "bg-threat/10 text-threat-hi ring-threat/30" : "bg-defense/10 text-defense-hi ring-defense/25")}>
@@ -217,6 +227,10 @@ function Vectors() {
                 <div>
                   <h3 className="text-xl font-semibold">{v.name}{v.featured && <span className="ml-2 rounded-md bg-threat/15 px-1.5 py-0.5 align-middle font-mono text-[10px] text-threat-hi">FASTEST GROWING</span>}</h3>
                   <p className="mt-2 text-[15px] leading-relaxed text-mute">{v.ex}</p>
+                </div>
+                <div className="grid gap-2 border-t border-white/[0.07] pt-4 text-[13.5px]">
+                  <div className="flex gap-2"><span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-threat" /><span className="text-mute"><span className="text-threat-hi">Attack:</span> {v.attack}</span></div>
+                  <div className="flex gap-2"><span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-defense" /><span className="text-mute"><span className="text-defense-hi">Defense:</span> {v.defense}</span></div>
                 </div>
               </div>
             </MagicCard>
